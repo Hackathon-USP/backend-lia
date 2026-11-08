@@ -114,18 +114,20 @@ def test_listar_atendimentos_com_filtros(client):
 
 
 
-def test_filtro_por_data_usa_o_dia_local(session):
+def test_filtro_por_data_usa_o_dia_local(uow):
     # 22h em São Paulo já é dia seguinte em UTC; deve contar como o dia local.
     from datetime import date, datetime
     from zoneinfo import ZoneInfo
 
-    from app.models import ModoAcessibilidade
-    from app.services import atendimento, recepcao
+    from app.application.atendimentos import ServicoAtendimento
+    from app.application.recepcao import ServicoRecepcao
+    from app.domain.enums import ModoAcessibilidade
 
     noite = datetime(2026, 3, 10, 22, 0, tzinfo=ZoneInfo("America/Sao_Paulo"))
-    a = atendimento.iniciar(session, ModoAcessibilidade.toque, noite)
-    assert [x.id for x, _ in recepcao.listar_atendimentos(session, date(2026, 3, 10))] == [a.id]
-    assert recepcao.listar_atendimentos(session, date(2026, 3, 11)) == []
+    a = ServicoAtendimento(uow, limiar_confianca=0.7).iniciar(ModoAcessibilidade.toque, noite).atendimento
+    recepcao = ServicoRecepcao(uow)
+    assert [item.atendimento.id for item in recepcao.listar_atendimentos(date(2026, 3, 10))] == [a.id]
+    assert recepcao.listar_atendimentos(date(2026, 3, 11)) == []
 
 
 def test_recepcao_mostra_nome_e_cpf(client):

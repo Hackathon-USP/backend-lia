@@ -4,9 +4,10 @@ from zoneinfo import ZoneInfo
 
 from sqlmodel import Session
 
-from app.db import criar_engine, init_db
-from app.models import TipoSenha
-from app.services import fila
+from app.application.senhas import ServicoSenhas
+from app.domain.enums import TipoSenha
+from app.persistence.db import criar_engine, init_db
+from app.persistence.unidade_de_trabalho import UnidadeDeTrabalhoSql
 
 
 def test_emite_senhas_sequenciais_por_tipo(client):
@@ -36,12 +37,13 @@ def test_consulta_senha(client):
     assert client.get("/senhas/N999").status_code == 404
 
 
-def test_numeracao_reinicia_no_dia_seguinte(session):
+def test_numeracao_reinicia_no_dia_seguinte(uow):
     hoje = datetime(2026, 3, 10, 23, 50, tzinfo=ZoneInfo("America/Sao_Paulo"))
-    assert fila.emitir_senha(session, TipoSenha.normal, hoje).codigo == "N001"
-    assert fila.emitir_senha(session, TipoSenha.normal, hoje).codigo == "N002"
+    senhas = ServicoSenhas(uow)
+    assert senhas.emitir(TipoSenha.normal, hoje).codigo == "N001"
+    assert senhas.emitir(TipoSenha.normal, hoje).codigo == "N002"
     amanha = hoje + timedelta(minutes=20)
-    assert fila.emitir_senha(session, TipoSenha.normal, amanha).codigo == "N001"
+    assert senhas.emitir(TipoSenha.normal, amanha).codigo == "N001"
 
 
 def test_emissao_concorrente_sem_duplicidade(tmp_path):
@@ -51,7 +53,7 @@ def test_emissao_concorrente_sem_duplicidade(tmp_path):
 
     def emitir(_):
         with Session(eng) as s:
-            return fila.emitir_senha(s, TipoSenha.normal).numero
+            return ServicoSenhas(UnidadeDeTrabalhoSql(s)).emitir(TipoSenha.normal).numero
 
     with ThreadPoolExecutor(max_workers=8) as pool:
         numeros = list(pool.map(emitir, range(40)))

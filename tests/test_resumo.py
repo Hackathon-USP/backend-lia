@@ -1,5 +1,5 @@
-from app.models import ModoAcessibilidade
-from app.services.resumo import gerar_alertas, gerar_resumo
+from app.domain.enums import ModoAcessibilidade
+from app.domain.resumo import gerar_alertas, gerar_resumo
 
 
 def test_dor_no_peito_gera_alerta():
