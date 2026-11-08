@@ -10,6 +10,7 @@ maiúsculas, acentos e espaços/hífens, então "CABEÇA", "cabeca" e "Cabeça" 
 
 import re
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -21,6 +22,11 @@ from app.domain.erros import RespostaInvalida
 class TipoPergunta(str, Enum):
     opcoes = "opcoes"
     escala = "escala"
+
+
+class OrigemPergunta(str, Enum):
+    triagem = "triagem"  # pergunta fixa, definida abaixo
+    lia = "lia"  # pergunta complementar criada pela LIA (IA) para este paciente
 
 
 def normalizar(texto: str) -> str:
@@ -53,6 +59,9 @@ class Pergunta:
     mostrar_se: dict[str, tuple[str, ...]] = field(default_factory=dict)
     # Não aparece para estes modos de acessibilidade.
     pular_para_modos: tuple[ModoAcessibilidade, ...] = ()
+    origem: OrigemPergunta = OrigemPergunta.triagem
+    # {opcao_id: alerta}: escolher a opção gera este alerta para a recepção.
+    alertas: dict[str, str] = field(default_factory=dict)
 
     def rotulo_de(self, valor: Any) -> str:
         for opcao in self.opcoes:
@@ -152,12 +161,18 @@ PERGUNTAS: tuple[Pergunta, ...] = (
 POR_ID: dict[str, Pergunta] = {p.id: p for p in PERGUNTAS}
 
 
-def posicao_no_fluxo(pergunta_id: str) -> int:
-    """Índice da pergunta na triagem; ids desconhecidos vão para o fim."""
-    for indice, pergunta in enumerate(PERGUNTAS):
+def posicao_no_fluxo(pergunta_id: str, extras: Sequence[Pergunta] = ()) -> int:
+    """Índice da pergunta na triagem (fixas e depois as da LIA); ids desconhecidos vão para o fim."""
+    fluxo = (*PERGUNTAS, *extras)
+    for indice, pergunta in enumerate(fluxo):
         if pergunta.id == pergunta_id:
             return indice
-    return len(PERGUNTAS)
+    return len(fluxo)
+
+
+def buscar(pergunta_id: str, extras: Sequence[Pergunta] = ()) -> Pergunta | None:
+    """Pergunta fixa ou da LIA com esse id."""
+    return POR_ID.get(pergunta_id) or next((p for p in extras if p.id == pergunta_id), None)
 
 
 def _aplicavel(pergunta: Pergunta, respostas: dict[str, Any], modo: ModoAcessibilidade) -> bool:
@@ -166,12 +181,17 @@ def _aplicavel(pergunta: Pergunta, respostas: dict[str, Any], modo: ModoAcessibi
     return all(respostas.get(pid) in valores for pid, valores in pergunta.mostrar_se.items())
 
 
-def proxima_pergunta(respostas: dict[str, Any], modo: ModoAcessibilidade) -> Pergunta | None:
-    """Primeira pergunta aplicável ainda não respondida, ou None se a triagem acabou."""
+def proxima_pergunta(
+    respostas: dict[str, Any], modo: ModoAcessibilidade, extras: Sequence[Pergunta] = ()
+) -> Pergunta | None:
+    """Primeira pergunta aplicável ainda não respondida, ou None se a triagem acabou.
+
+    As perguntas da LIA (`extras`) só vêm depois de todas as fixas.
+    """
     for pergunta in PERGUNTAS:
         if pergunta.id not in respostas and _aplicavel(pergunta, respostas, modo):
             return pergunta
-    return None
+    return next((p for p in extras if p.id not in respostas), None)
 
 
 def _interpretar_numero(valor: Any) -> int | None:

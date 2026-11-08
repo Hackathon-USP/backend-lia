@@ -5,12 +5,12 @@ from datetime import date, datetime
 
 from app.application.relogio import agora_local, dia_local
 from app.application.senhas import ServicoSenhas
-from app.domain.entidades import Atendimento, Identificacao, Queixa, Senha
+from app.domain.entidades import Atendimento, Identificacao, Queixa, RelatorioTriagem, Senha
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha
 from app.domain.erros import AtendimentoNaoEncontrado, FilaVazia
 from app.domain.identificacao import apenas_digitos
 from app.domain.repositorios import UnidadeDeTrabalho
-from app.domain.triagem import POR_ID, posicao_no_fluxo
+from app.domain.triagem import OrigemPergunta, Pergunta, buscar, posicao_no_fluxo
 
 
 @dataclass
@@ -18,6 +18,7 @@ class SenhaNaFila:
     senha: Senha
     atendimento: Atendimento | None  # None para senhas emitidas direto em POST /senhas
     identificacao: Identificacao | None
+    relatorio: RelatorioTriagem | None = None  # só preenchido ao chamar a senha
 
 
 @dataclass
@@ -34,29 +35,34 @@ class RespostaRotulada:
     valor: object
     resposta: str
     canal: str | None
+    da_lia: bool = False  # pergunta complementar feita pela LIA (IA)
 
 
 @dataclass
 class DetalheAtendimento(AtendimentoListado):
     queixa: Queixa | None
     respostas: list[RespostaRotulada]
+    relatorio: RelatorioTriagem | None = None
 
 
-def _rotular(atendimento: Atendimento, pergunta_id: str, valor: object) -> RespostaRotulada:
-    pergunta = POR_ID.get(pergunta_id)
+def _rotular(
+    atendimento: Atendimento, pergunta_id: str, valor: object, extras: tuple[Pergunta, ...]
+) -> RespostaRotulada:
+    pergunta = buscar(pergunta_id, extras)
     return RespostaRotulada(
         pergunta_id=pergunta_id,
         pergunta=pergunta.texto if pergunta else pergunta_id,
         valor=valor,
         resposta=pergunta.rotulo_de(valor) if pergunta else str(valor),
         canal=atendimento.canais.get(pergunta_id),
+        da_lia=pergunta is not None and pergunta.origem == OrigemPergunta.lia,
     )
 
 
-def rotular_respostas(atendimento: Atendimento) -> list[RespostaRotulada]:
-    """Respostas na ordem das perguntas, com o texto legível de cada opção."""
-    itens = [_rotular(atendimento, pid, valor) for pid, valor in atendimento.respostas.items()]
-    return sorted(itens, key=lambda item: posicao_no_fluxo(item.pergunta_id))
+def rotular_respostas(atendimento: Atendimento, extras: tuple[Pergunta, ...] = ()) -> list[RespostaRotulada]:
+    """Respostas na ordem das perguntas (fixas e depois as da LIA), com o texto legível de cada opção."""
+    itens = [_rotular(atendimento, pid, valor, extras) for pid, valor in atendimento.respostas.items()]
+    return sorted(itens, key=lambda item: posicao_no_fluxo(item.pergunta_id, extras))
 
 
 class ServicoRecepcao:
@@ -87,6 +93,8 @@ class ServicoRecepcao:
             conseguiu = self.uow.senhas.tirar_da_espera(item.senha, StatusSenha.em_atendimento)
             self.uow.commit()
             if conseguiu:
+                if item.atendimento is not None:
+                    item.relatorio = self.uow.relatorios.obter(item.atendimento.id)
                 return item
             # Outro guichê chamou esta senha no meio do caminho: tenta a seguinte.
         raise FilaVazia
@@ -126,10 +134,12 @@ class ServicoRecepcao:
         atendimento = self.uow.atendimentos.obter(atendimento_id)
         if atendimento is None:
             raise AtendimentoNaoEncontrado
+        lia = self.uow.perguntas_da_lia.obter(atendimento_id)
         return DetalheAtendimento(
             atendimento=atendimento,
             senha=self.uow.senhas.obter(atendimento.senha_id) if atendimento.senha_id else None,
             identificacao=self.uow.identificacoes.obter(atendimento_id),
             queixa=self.uow.queixas.do_atendimento(atendimento_id),
-            respostas=rotular_respostas(atendimento),
+            respostas=rotular_respostas(atendimento, lia.lista if lia else ()),
+            relatorio=self.uow.relatorios.obter(atendimento_id),
         )

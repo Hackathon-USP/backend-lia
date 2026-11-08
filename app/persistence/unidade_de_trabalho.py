@@ -4,7 +4,9 @@ from app.persistence.repositorios import (
     RepositorioAmostrasLibrasSql,
     RepositorioAtendimentosSql,
     RepositorioIdentificacoesSql,
+    RepositorioPerguntasDaLiaSql,
     RepositorioQueixasSql,
+    RepositorioRelatoriosSql,
     RepositorioSenhasSql,
 )
 
@@ -18,6 +20,8 @@ class UnidadeDeTrabalhoSql:
         self.atendimentos = RepositorioAtendimentosSql(session)
         self.identificacoes = RepositorioIdentificacoesSql(session)
         self.queixas = RepositorioQueixasSql(session)
+        self.perguntas_da_lia = RepositorioPerguntasDaLiaSql(session)
+        self.relatorios = RepositorioRelatoriosSql(session)
         self.amostras_libras = RepositorioAmostrasLibrasSql(session)
 
     def commit(self) -> None:

@@ -50,6 +50,10 @@ class IdentificacaoPendente(Conflito):
     mensagem_padrao = "Informe nome e CPF antes de finalizar"
 
 
+class RelatorioIndisponivel(Conflito):
+    mensagem_padrao = "O relatório sai depois que a triagem é finalizada"
+
+
 # --- Dado enviado não passa na validação --------------------------------------
 
 

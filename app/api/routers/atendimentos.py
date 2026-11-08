@@ -1,8 +1,10 @@
 """Rotas da tela do paciente."""
 
-from fastapi import APIRouter, Depends, status
+import logging
 
-from app.api.dependencias import servico_atendimento
+from fastapi import APIRouter, BackgroundTasks, Depends, status
+
+from app.api.dependencias import AbrirUnidade, assistente_triagem, fabrica_de_unidades, servico_atendimento
 from app.api.schemas import (
     AtendimentoCriar,
     AtendimentoLeitura,
@@ -15,9 +17,21 @@ from app.api.schemas import (
     SenhaLeitura,
 )
 from app.application.atendimentos import EstadoAtendimento, ServicoAtendimento
+from app.application.relatorios import ServicoRelatorio
+from app.domain.assistente import AssistenteTriagem
 from app.domain.textos import TEXTOS
 
 router = APIRouter(prefix="/atendimentos", tags=["atendimentos"])
+logger = logging.getLogger(__name__)
+
+
+def gerar_relatorio_depois(abrir: AbrirUnidade, assistente: AssistenteTriagem | None, atendimento_id: int) -> None:
+    """Escreve o relatório da triagem depois que a senha já foi entregue ao paciente."""
+    try:
+        with abrir() as uow:
+            ServicoRelatorio(uow, assistente).gerar(atendimento_id)
+    except Exception:  # roda fora da requisição: registra e segue (a recepção pode pedir de novo)
+        logger.exception("Atendimento %s: não foi possível gerar o relatório", atendimento_id)
 
 
 def _para_leitura(estado: EstadoAtendimento) -> AtendimentoLeitura:
@@ -59,6 +73,10 @@ def responder(
     Aceita o nome do sinal reconhecido em Libras (ex.: `"DOR"`) ou a palavra falada.
     Se vier por Libras/voz com `confianca` abaixo do limiar, ou com um sinal que não
     corresponde a nenhuma opção, nada é gravado e a resposta vem com `repetir: true`.
+
+    Depois das perguntas fixas, a LIA (IA) pode mandar até 3 perguntas complementares
+    para o caso do paciente (`origem: "lia"`); elas são respondidas do mesmo jeito.
+    Esta chamada demora alguns segundos a mais quando a LIA está criando a pergunta.
     """
     estado = servico.responder(atendimento_id, dados.pergunta_id, dados.valor, dados.canal, dados.confianca)
     return _para_leitura(estado)
@@ -108,9 +126,20 @@ def identificar(
 
 
 @router.post("/{atendimento_id}/finalizar", response_model=FinalizacaoLeitura)
-def finalizar(atendimento_id: int, servico: ServicoAtendimento = Depends(servico_atendimento)):
-    """Emite a senha, gera o resumo para a recepção e devolve a mensagem final do totem."""
+def finalizar(
+    atendimento_id: int,
+    tarefas: BackgroundTasks,
+    servico: ServicoAtendimento = Depends(servico_atendimento),
+    abrir: AbrirUnidade = Depends(fabrica_de_unidades),
+    assistente: AssistenteTriagem | None = Depends(assistente_triagem),
+):
+    """Emite a senha, gera o resumo para a recepção e devolve a mensagem final do totem.
+
+    O relatório da triagem é escrito logo depois (sem atrasar a senha) e aparece em
+    `GET /recepcao/atendimentos/{id}`.
+    """
     finalizacao = servico.finalizar(atendimento_id)
+    tarefas.add_task(gerar_relatorio_depois, abrir, assistente, atendimento_id)
     return FinalizacaoLeitura(
         atendimento_id=finalizacao.atendimento.id,
         senha=SenhaLeitura.model_validate(finalizacao.senha, from_attributes=True),
