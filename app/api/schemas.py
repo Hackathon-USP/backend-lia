@@ -82,8 +82,8 @@ class RespostaCriar(BaseModel):
 
 
 class IdentificacaoCriar(BaseModel):
-    nome: str = Field(description="Nome completo do paciente.")
     cpf: str = Field(description="CPF com ou sem máscara (ex.: '123.456.789-09').")
+    nome: str | None = Field(default=None, description="Nome do paciente, aceito para clientes anteriores.")
 
 
 class AtendimentoLeitura(BaseModel):
@@ -93,7 +93,7 @@ class AtendimentoLeitura(BaseModel):
     respostas: dict[str, Any]
     canais: dict[str, str] = {}
     proxima_pergunta: PerguntaLeitura | None
-    # false = falta PUT /identificacao (nome e CPF) antes de poder finalizar.
+    # false = falta PUT /identificacao (CPF) antes de poder finalizar.
     identificado: bool = False
     # true = a última resposta não foi entendida; o totem mostra `mensagem` e repete a pergunta.
     repetir: bool = False

@@ -40,7 +40,7 @@ def _nome_e_cpf(ident: Identificacao | None) -> dict[str, str | None]:
     """Campos `nome` e `cpf` (formatado); vazios para atendimentos sem identificação."""
     if ident is None:
         return {"nome": None, "cpf": None}
-    return {"nome": ident.nome, "cpf": formatar_cpf(ident.cpf)}
+    return {"nome": ident.nome or None, "cpf": formatar_cpf(ident.cpf)}
 
 
 def _dados_do_paciente(atendimento: Atendimento | None, ident: Identificacao | None) -> dict[str, Any]:

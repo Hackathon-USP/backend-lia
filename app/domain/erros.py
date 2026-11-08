@@ -47,7 +47,7 @@ class TriagemIncompleta(Conflito):
 
 
 class IdentificacaoPendente(Conflito):
-    mensagem_padrao = "Informe nome e CPF antes de finalizar"
+    mensagem_padrao = "Informe o CPF antes de finalizar"
 
 
 class RelatorioIndisponivel(Conflito):

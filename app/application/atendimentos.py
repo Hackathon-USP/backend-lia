@@ -42,7 +42,7 @@ class ConferenciaAtendimento:
 
     atendimento: Atendimento
     conferencia: Conferencia
-    pode_finalizar: bool  # triagem completa e nome/CPF informados
+    pode_finalizar: bool  # triagem completa e CPF informado
 
 
 @dataclass
@@ -175,9 +175,9 @@ class ServicoAtendimento:
         return self._estado(atendimento, lia=lia)
 
     def identificar(
-        self, atendimento_id: int, nome: str, cpf: str, agora: datetime | None = None
+        self, atendimento_id: int, nome: str | None, cpf: str, agora: datetime | None = None
     ) -> EstadoAtendimento:
-        """Grava (ou corrige, antes de finalizar) nome e CPF."""
+        """Grava (ou corrige, antes de finalizar) a identificação por CPF."""
         atendimento = self.obter(atendimento_id)
         atendimento.garantir_em_andamento()
 

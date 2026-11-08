@@ -119,7 +119,7 @@ def identificar(
     dados: IdentificacaoCriar,
     servico: ServicoAtendimento = Depends(servico_atendimento),
 ):
-    """Grava nome e CPF do paciente (obrigatórios para finalizar). Pode ser chamado de
+    """Grava o CPF do paciente (obrigatório para finalizar). Pode ser chamado de
     novo para corrigir, enquanto o atendimento não foi finalizado. Não devolve os dados
     de volta: o totem é público."""
     return _para_leitura(servico.identificar(atendimento_id, dados.nome, dados.cpf))

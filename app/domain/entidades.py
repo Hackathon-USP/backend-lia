@@ -170,12 +170,17 @@ class Identificacao:
     criada_em: datetime
 
     @classmethod
-    def criar(cls, atendimento_id: int, nome: str, cpf: str, agora: datetime) -> "Identificacao":
-        """Valida e normaliza. Levanta IdentificacaoInvalida se nome ou CPF forem inválidos."""
-        return cls(atendimento_id, normalizar_nome(nome), normalizar_cpf(cpf), agora)
+    def criar(cls, atendimento_id: int, nome: str | None, cpf: str, agora: datetime) -> "Identificacao":
+        # A coluna legada de nome é NOT NULL nos bancos existentes.
+        return cls(atendimento_id, normalizar_nome(nome) if nome is not None else "", normalizar_cpf(cpf), agora)
 
-    def corrigir(self, nome: str, cpf: str) -> None:
-        self.nome, self.cpf = normalizar_nome(nome), normalizar_cpf(cpf)
+    def corrigir(self, nome: str | None, cpf: str) -> None:
+        novo_cpf = normalizar_cpf(cpf)
+        if nome is not None:
+            self.nome = normalizar_nome(nome)
+        elif novo_cpf != self.cpf:
+            self.nome = ""
+        self.cpf = novo_cpf
 
 
 # --- Queixa -------------------------------------------------------------------

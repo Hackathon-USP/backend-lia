@@ -53,6 +53,21 @@ def test_identificar_atendimento_inexistente_retorna_404(client):
     assert identificar(client, 999).status_code == 404
 
 
+def test_atendimento_pode_ser_concluido_apenas_com_cpf(client):
+    a = iniciar(client)
+    responder_tudo(client, a["id"], EXAME)
+    url = f"/atendimentos/{a['id']}"
+    assert client.put(f"{url}/identificacao", json={"cpf": "529.982.247-26"}).status_code == 422
+    assert client.put(f"{url}/identificacao", json={"cpf": CPF_VALIDO}).json()["identificado"] is True
+    assert client.put(f"{url}/identificacao", json={"cpf": "11144477735"}).status_code == 200
+    assert client.get(f"{url}/conferencia").json()["pode_finalizar"] is True
+    assert client.post(f"{url}/finalizar").status_code == 200
+    detalhe = client.get(f"/recepcao{url}").json()
+    assert detalhe["cpf"] == "111.444.777-35"
+    assert detalhe["nome"] is None
+    assert "Paciente:" not in detalhe["resumo"]
+
+
 def test_finalizar_sem_identificacao_retorna_409(client):
     a = iniciar(client)
     responder_tudo(client, a["id"], EXAME)
