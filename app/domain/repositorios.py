@@ -8,6 +8,7 @@ mexe em regra de negócio.
 from datetime import date
 from typing import Protocol
 
+from app.domain.amostras_libras import AmostraLibras
 from app.domain.entidades import Atendimento, Identificacao, Queixa, Senha
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha, TipoSenha
 
@@ -66,6 +67,28 @@ class RepositorioQueixas(Protocol):
     def do_atendimento(self, atendimento_id: int) -> Queixa | None: ...
 
 
+class RepositorioAmostrasLibras(Protocol):
+    def ids_existentes(self, ids: list[str]) -> set[str]:
+        """Quais destes ids já estão gravados."""
+
+    def adicionar(self, amostra: AmostraLibras) -> AmostraLibras: ...
+
+    def listar(
+        self,
+        fonte: str | None = None,
+        glosa: str | None = None,
+        depois_de: int = 0,
+        limite: int = 100,
+    ) -> list[AmostraLibras]:
+        """Em ordem de chegada (`seq`), só as com `seq` > `depois_de`."""
+
+    def contagens(self, fonte: str | None = None) -> list[tuple[str, str, str, int]]:
+        """(glosa, fonte, sinalizante, quantidade) de cada combinação gravada."""
+
+    def remover(self, fonte: str | None = None, glosa: str | None = None) -> int:
+        """Apaga as que casam com os filtros e devolve quantas foram apagadas."""
+
+
 class UnidadeDeTrabalho(Protocol):
     """Agrupa os repositórios de uma transação. Nada fica gravado até `commit()`."""
 
@@ -73,5 +96,6 @@ class UnidadeDeTrabalho(Protocol):
     atendimentos: RepositorioAtendimentos
     identificacoes: RepositorioIdentificacoes
     queixas: RepositorioQueixas
+    amostras_libras: RepositorioAmostrasLibras
 
     def commit(self) -> None: ...

@@ -6,6 +6,7 @@
 from fastapi import Depends
 from sqlmodel import Session
 
+from app.application.amostras_libras import ServicoAmostrasLibras
 from app.application.atendimentos import ServicoAtendimento
 from app.application.recepcao import ServicoRecepcao
 from app.application.senhas import ServicoSenhas
@@ -29,3 +30,8 @@ def servico_senhas(uow: UnidadeDeTrabalho = Depends(unidade_de_trabalho)) -> Ser
 
 def servico_recepcao(uow: UnidadeDeTrabalho = Depends(unidade_de_trabalho)) -> ServicoRecepcao:
     return ServicoRecepcao(uow)
+
+
+def servico_amostras_libras(uow: UnidadeDeTrabalho = Depends(unidade_de_trabalho)) -> ServicoAmostrasLibras:
+    fontes = frozenset(f.strip() for f in settings.fontes_amostras_libras.split(",") if f.strip())
+    return ServicoAmostrasLibras(uow, fontes_aceitas=fontes)
