@@ -31,6 +31,13 @@ Modos `libras` e `voz` recebem senha **preferencial** automaticamente (Lei 10.04
 `GET /recepcao/fila` (senhas do dia com alertas), `POST /recepcao/chamar` (próxima senha),
 `GET /recepcao/atendimentos` e `GET /recepcao/atendimentos/{id}` (resumo e respostas).
 **Ainda sem autenticação** — não usar com dados reais antes de proteger.
+
+### Treino do reconhecimento de Libras (`/libras`)
+A página `/treinar` do front faz o avatar do VLibras sinalizar cada glosa, extrai os
+pontos das mãos e do tronco e envia as amostras (`POST /libras/amostras`). Os totens
+baixam com `GET /libras/amostras?depois_de=<cursor>` (só o que é novo) e treinam o
+reconhecimento no próprio navegador. Por padrão o servidor só aceita a fonte `vlibras`
+(`FONTES_AMOSTRAS_LIBRAS`): gravações de pessoas são dados pessoais.
 """
 
 TAGS = [
@@ -38,5 +45,6 @@ TAGS = [
     {"name": "atendimentos", "description": "Sessão de triagem do paciente, da abertura à senha."},
     {"name": "senhas", "description": "Emissão e consulta de senhas da fila."},
     {"name": "recepcao", "description": "Fila do dia, detalhe dos atendimentos e chamada de senhas."},
+    {"name": "libras", "description": "Amostras para treinar o reconhecimento de sinais (avatar do VLibras)."},
     {"name": "infra", "description": "Verificação de saúde do serviço."},
 ]

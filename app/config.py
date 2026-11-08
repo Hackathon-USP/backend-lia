@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # Abaixo desta confiança (0 a 1) o reconhecimento de Libras/voz é descartado
     # e o totem pede para o paciente repetir.
     limiar_confianca: float = 0.7
+    # Fontes de amostras de Libras que o servidor aceita guardar (separe por vírgula).
+    # Padrão: só o avatar do VLibras. Gravações de pessoas ("proprio") são dados pessoais
+    # (LGPD) e as do V-LIBRASIL não podem ser redistribuídas: libere só com autorização.
+    fontes_amostras_libras: str = "vlibras"
 
 
 settings = Settings()

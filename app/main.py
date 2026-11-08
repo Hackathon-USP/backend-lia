@@ -11,10 +11,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api.documentacao import DESCRICAO, TAGS
 from app.api.erros import registrar_tratamento_de_erros
-from app.api.routers import atendimentos, conteudo, infra, recepcao, senhas
+from app.api.routers import atendimentos, conteudo, infra, libras, recepcao, senhas
 from app.config import settings
 from app.persistence.db import init_db
 
@@ -40,10 +41,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# As amostras de Libras são listas grandes de números: compactar reduz a resposta em ~4x.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 registrar_tratamento_de_erros(app)
 
 app.include_router(senhas.router)
 app.include_router(atendimentos.router)
 app.include_router(conteudo.router)
 app.include_router(recepcao.router)
+app.include_router(libras.router)
 app.include_router(infra.router)

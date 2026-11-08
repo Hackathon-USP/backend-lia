@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
 from app.persistence.repositorios import (
+    RepositorioAmostrasLibrasSql,
     RepositorioAtendimentosSql,
     RepositorioIdentificacoesSql,
     RepositorioQueixasSql,
@@ -17,6 +18,7 @@ class UnidadeDeTrabalhoSql:
         self.atendimentos = RepositorioAtendimentosSql(session)
         self.identificacoes = RepositorioIdentificacoesSql(session)
         self.queixas = RepositorioQueixasSql(session)
+        self.amostras_libras = RepositorioAmostrasLibrasSql(session)
 
     def commit(self) -> None:
         self.session.commit()
