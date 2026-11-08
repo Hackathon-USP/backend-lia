@@ -68,6 +68,16 @@ class Atendimento(SQLModel, table=True):
     finalizado_em: datetime | None = None
 
 
+class Identificacao(SQLModel, table=True):
+    """Nome e CPF informados pelo paciente no totem. Tabela separada para que o
+    `create_all` a crie em bancos já existentes sem precisar de ALTER TABLE."""
+
+    atendimento_id: int = Field(foreign_key="atendimento.id", primary_key=True)
+    nome: str
+    cpf: str = Field(index=True)  # só os 11 dígitos
+    criada_em: datetime
+
+
 class Queixa(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     atendimento_id: int = Field(foreign_key="atendimento.id", index=True)

@@ -37,8 +37,12 @@ def gerar_resumo(
     modo: ModoAcessibilidade,
     respostas: dict[str, Any],
     alertas: list[str],
+    nome: str | None = None,
 ) -> str:
-    linhas = [f"Senha: {codigo_senha}", f"Comunicação: {DESCRICAO_MODO[modo]}"]
+    linhas = [f"Senha: {codigo_senha}"]
+    if nome:
+        linhas.append(f"Paciente: {nome}")
+    linhas.append(f"Comunicação: {DESCRICAO_MODO[modo]}")
     if alertas:
         linhas.append("ATENÇÃO: " + "; ".join(alertas))
     if "motivo" in respostas:

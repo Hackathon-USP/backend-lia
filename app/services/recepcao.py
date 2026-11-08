@@ -11,6 +11,7 @@ from app.config import settings
 from app.conteudo.fluxo import POR_ID
 from app.models import (
     Atendimento,
+    Identificacao,
     ModoAcessibilidade,
     Queixa,
     Senha,
@@ -63,8 +64,15 @@ def listar_atendimentos(
     data_ref: date | None = None,
     status: StatusAtendimento | None = None,
     modo: ModoAcessibilidade | None = None,
+    cpf: str | None = None,
 ) -> list[tuple[Atendimento, Senha | None]]:
     consulta = select(Atendimento)
+    if cpf is not None:
+        # Aceita com ou sem máscara; um CPF que não existe só devolve lista vazia.
+        digitos = "".join(c for c in cpf if c.isdigit())
+        consulta = consulta.join(Identificacao, Identificacao.atendimento_id == Atendimento.id).where(
+            Identificacao.cpf == digitos
+        )
     if status is not None:
         consulta = consulta.where(Atendimento.status == status)
     if modo is not None:

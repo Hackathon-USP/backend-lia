@@ -1,6 +1,6 @@
 """Endpoints da tela da recepção.
 
-TODO: proteger antes de uso real — devolvem dados de saúde dos pacientes (LGPD).
+TODO: proteger antes de uso real — devolvem nome, CPF e dados de saúde dos pacientes (LGPD).
 """
 
 from datetime import date
@@ -20,6 +20,7 @@ from app.schemas import (
     SenhaLeitura,
     SenhaStatusAtualizar,
 )
+from app.services import identificacao
 from app.services import recepcao as svc
 from app.services.atendimento import AtendimentoNaoEncontrado
 
@@ -30,19 +31,27 @@ def _senha(senha) -> SenhaLeitura | None:
     return SenhaLeitura.model_validate(senha, from_attributes=True) if senha else None
 
 
-def _resumo(atendimento, senha) -> AtendimentoResumo:
+def _nome_cpf(ident) -> dict:
+    """Campos `nome` e `cpf` (formatado); vazios para atendimentos sem identificação."""
+    if ident is None:
+        return {"nome": None, "cpf": None}
+    return {"nome": ident.nome, "cpf": identificacao.formatar_cpf(ident.cpf)}
+
+
+def _resumo(atendimento, senha, ident) -> AtendimentoResumo:
     return AtendimentoResumo(
         id=atendimento.id,
         modo=atendimento.modo,
         status=atendimento.status,
         senha=senha.codigo if senha else None,
+        **_nome_cpf(ident),
         alertas=atendimento.alertas,
         criado_em=atendimento.criado_em,
         finalizado_em=atendimento.finalizado_em,
     )
 
 
-def _item_fila(item: svc.ItemFila) -> ItemFila:
+def _item_fila(item: svc.ItemFila, ident) -> ItemFila:
     a = item.atendimento
     return ItemFila(
         codigo=item.senha.codigo,
@@ -51,6 +60,7 @@ def _item_fila(item: svc.ItemFila) -> ItemFila:
         criada_em=item.senha.criada_em,
         atendimento_id=a.id if a else None,
         modo=a.modo if a else None,
+        **_nome_cpf(ident),
         alertas=a.alertas if a else [],
     )
 
@@ -63,7 +73,9 @@ def fila(
 ):
     """Senhas do dia (padrão: hoje). Ordem: aguardando primeiro, preferenciais antes,
     depois por horário de emissão. Inclui os alertas da triagem de cada paciente."""
-    return [_item_fila(i) for i in svc.listar_fila(session, data, status_senha)]
+    itens = svc.listar_fila(session, data, status_senha)
+    idents = identificacao.por_atendimentos(session, [i.atendimento.id for i in itens if i.atendimento])
+    return [_item_fila(i, idents.get(i.atendimento.id) if i.atendimento else None) for i in itens]
 
 
 @router.get("/atendimentos", response_model=list[AtendimentoResumo])
@@ -71,10 +83,13 @@ def listar_atendimentos(
     data: date | None = None,
     status_atendimento: StatusAtendimento | None = Query(None, alias="status"),
     modo: ModoAcessibilidade | None = None,
+    cpf: str | None = Query(None, description="Com ou sem máscara. Traz o histórico do paciente."),
     session: Session = Depends(get_session),
 ):
     """Atendimentos cadastrados, mais recentes primeiro. Todos os filtros são opcionais."""
-    return [_resumo(a, s) for a, s in svc.listar_atendimentos(session, data, status_atendimento, modo)]
+    linhas = svc.listar_atendimentos(session, data, status_atendimento, modo, cpf)
+    idents = identificacao.por_atendimentos(session, [a.id for a, _ in linhas])
+    return [_resumo(a, s, idents.get(a.id)) for a, s in linhas]
 
 
 @router.get("/atendimentos/{atendimento_id}", response_model=AtendimentoDetalhe)
@@ -85,7 +100,7 @@ def detalhar_atendimento(atendimento_id: int, session: Session = Depends(get_ses
     except AtendimentoNaoEncontrado:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Atendimento não encontrado") from None
     return AtendimentoDetalhe(
-        **_resumo(d.atendimento, d.senha).model_dump(),
+        **_resumo(d.atendimento, d.senha, identificacao.obter(session, atendimento_id)).model_dump(),
         senha_detalhe=_senha(d.senha),
         resumo=d.atendimento.resumo,
         respostas=[RespostaRotulada(**vars(r)) for r in d.respostas],
@@ -105,6 +120,7 @@ def chamar(session: Session = Depends(get_session)):
         senha=_senha(item.senha),
         atendimento_id=a.id if a else None,
         modo=a.modo if a else None,
+        **_nome_cpf(identificacao.obter(session, a.id) if a else None),
         alertas=a.alertas if a else [],
         resumo=a.resumo if a else None,
     )

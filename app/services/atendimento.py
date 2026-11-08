@@ -7,6 +7,7 @@ from app.conteudo import fluxo
 from app.conteudo.textos import TEXTOS
 from app.models import (
     Atendimento,
+    Identificacao,
     ModoAcessibilidade,
     Queixa,
     Senha,
@@ -29,6 +30,10 @@ class RespostaInvalida(Exception):
 
 
 class TriagemIncompleta(Exception):
+    pass
+
+
+class IdentificacaoPendente(Exception):
     pass
 
 
@@ -112,6 +117,9 @@ def finalizar(session: Session, atendimento_id: int, agora: datetime | None = No
         raise AtendimentoJaFinalizado
     if proxima_pergunta(atendimento) is not None:
         raise TriagemIncompleta
+    identificacao = session.get(Identificacao, atendimento.id)
+    if identificacao is None:
+        raise IdentificacaoPendente
 
     tipo = tipo_da_senha(atendimento)
     senha = fila.emitir_senha(session, tipo, agora)  # faz commit da senha
@@ -131,7 +139,9 @@ def finalizar(session: Session, atendimento_id: int, agora: datetime | None = No
 
     alertas = resumo.gerar_alertas(respostas)
     atendimento.alertas = alertas
-    atendimento.resumo = resumo.gerar_resumo(senha.codigo, atendimento.modo, respostas, alertas)
+    atendimento.resumo = resumo.gerar_resumo(
+        senha.codigo, atendimento.modo, respostas, alertas, nome=identificacao.nome
+    )
     atendimento.senha_id = senha.id
     atendimento.status = StatusAtendimento.finalizado
     atendimento.finalizado_em = agora

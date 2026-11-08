@@ -30,8 +30,10 @@ ramificação das perguntas, emite a senha e monta o resumo para a recepção.
    O `valor` pode ser o id da opção, o rótulo ou o **nome do sinal** reconhecido
    (ex.: `"DOR"`). Se vier por Libras/voz com `confianca` baixa, ou com um sinal que
    não casa com nenhuma opção, nada é gravado e a resposta vem com `repetir: true`.
-4. `POST /atendimentos/{id}/finalizar` — emite a senha e devolve a mensagem final.
-5. `GET /atendimentos/{id}` — estado atual, para retomar se a tela recarregar.
+4. `PUT /atendimentos/{id}/identificacao` `{nome, cpf}` — obrigatório antes de finalizar
+   (`identificado` na resposta indica se já foi feito).
+5. `POST /atendimentos/{id}/finalizar` — emite a senha e devolve a mensagem final.
+6. `GET /atendimentos/{id}` — estado atual, para retomar se a tela recarregar.
 
 Modos `libras` e `voz` recebem senha **preferencial** automaticamente (Lei 10.048/2000).
 

@@ -1,4 +1,4 @@
-from tests.test_atendimentos import iniciar, responder_tudo
+from tests.test_atendimentos import finalizar, iniciar, responder_tudo
 
 DOR_NO_PEITO = {
     "motivo": "sintoma", "sintoma": "dor", "local_dor": "peito",
@@ -10,7 +10,7 @@ def atender(client, modo, respostas):
     """Faz a triagem completa e finaliza. Devolve (atendimento_id, codigo_senha)."""
     a = iniciar(client, modo)
     responder_tudo(client, a["id"], respostas)
-    resp = client.post(f"/atendimentos/{a['id']}/finalizar")
+    resp = finalizar(client, a["id"])
     assert resp.status_code == 200, resp.text
     return a["id"], resp.json()["senha"]["codigo"]
 
@@ -126,3 +126,39 @@ def test_filtro_por_data_usa_o_dia_local(session):
     a = atendimento.iniciar(session, ModoAcessibilidade.toque, noite)
     assert [x.id for x, _ in recepcao.listar_atendimentos(session, date(2026, 3, 10))] == [a.id]
     assert recepcao.listar_atendimentos(session, date(2026, 3, 11)) == []
+
+
+def test_recepcao_mostra_nome_e_cpf(client):
+    id_, codigo = atender(client, "libras", DOR_NO_PEITO)
+
+    [item] = client.get("/recepcao/fila").json()
+    assert item["nome"] == "Maria da Silva" and item["cpf"] == "529.982.247-25"
+
+    d = client.get(f"/recepcao/atendimentos/{id_}").json()
+    assert d["nome"] == "Maria da Silva" and d["cpf"] == "529.982.247-25"
+    assert "Paciente: Maria da Silva" in d["resumo"]
+    assert "52998224725" not in d["resumo"] and "529.982.247-25" not in d["resumo"]
+
+    chamada = client.post("/recepcao/chamar").json()
+    assert chamada["nome"] == "Maria da Silva" and chamada["cpf"] == "529.982.247-25"
+
+
+def test_atendimento_sem_identificacao_vem_com_nome_nulo(client):
+    a = iniciar(client)
+    [item] = client.get("/recepcao/atendimentos").json()
+    assert item["id"] == a["id"] and item["nome"] is None and item["cpf"] is None
+
+
+def test_filtro_por_cpf(client):
+    from tests.test_atendimentos import identificar
+
+    id_maria, _ = atender(client, "toque", {"motivo": "exame", "prioridade": "nao"})
+    outro = iniciar(client)
+    responder_tudo(client, outro["id"], {"motivo": "exame", "prioridade": "nao"})
+    identificar(client, outro["id"], nome="João Souza", cpf="111.444.777-35")
+    client.post(f"/atendimentos/{outro['id']}/finalizar")
+
+    for cpf in ["529.982.247-25", "52998224725"]:
+        achados = client.get("/recepcao/atendimentos", params={"cpf": cpf}).json()
+        assert [a["id"] for a in achados] == [id_maria]
+    assert client.get("/recepcao/atendimentos", params={"cpf": "000"}).json() == []

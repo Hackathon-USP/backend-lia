@@ -71,6 +71,11 @@ class RespostaCriar(BaseModel):
     )
 
 
+class IdentificacaoCriar(BaseModel):
+    nome: str = Field(description="Nome completo do paciente.")
+    cpf: str = Field(description="CPF com ou sem máscara (ex.: '123.456.789-09').")
+
+
 class AtendimentoLeitura(BaseModel):
     id: int
     modo: ModoAcessibilidade
@@ -78,6 +83,8 @@ class AtendimentoLeitura(BaseModel):
     respostas: dict[str, Any]
     canais: dict[str, str] = {}
     proxima_pergunta: PerguntaLeitura | None
+    # false = falta PUT /identificacao (nome e CPF) antes de poder finalizar.
+    identificado: bool = False
     # true = a última resposta não foi entendida; o totem mostra `mensagem` e repete a pergunta.
     repetir: bool = False
     mensagem: str | None = None
@@ -101,6 +108,8 @@ class ItemFila(BaseModel):
     # Vazios quando a senha foi emitida direto em POST /senhas, sem triagem.
     atendimento_id: int | None = None
     modo: ModoAcessibilidade | None = None
+    nome: str | None = None
+    cpf: str | None = None
     alertas: list[str] = []
 
 
@@ -109,6 +118,8 @@ class AtendimentoResumo(BaseModel):
     modo: ModoAcessibilidade
     status: StatusAtendimento
     senha: str | None = None
+    nome: str | None = None
+    cpf: str | None = Field(default=None, description="Formatado: 123.456.789-09.")
     alertas: list[str] = []
     criado_em: datetime
     finalizado_em: datetime | None = None
@@ -140,6 +151,8 @@ class Chamada(BaseModel):
     senha: SenhaLeitura
     atendimento_id: int | None = None
     modo: ModoAcessibilidade | None = None
+    nome: str | None = None
+    cpf: str | None = None
     alertas: list[str] = []
     resumo: str | None = None
 

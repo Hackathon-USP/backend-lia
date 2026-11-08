@@ -29,6 +29,19 @@ def responder_tudo(client, atendimento_id, respostas):
     return perguntadas
 
 
+CPF_VALIDO = "529.982.247-25"
+
+
+def identificar(client, atendimento_id, nome="Maria da Silva", cpf=CPF_VALIDO):
+    return client.put(f"/atendimentos/{atendimento_id}/identificacao", json={"nome": nome, "cpf": cpf})
+
+
+def finalizar(client, atendimento_id):
+    """Informa nome e CPF (obrigatórios) e finaliza."""
+    identificar(client, atendimento_id)
+    return client.post(f"/atendimentos/{atendimento_id}/finalizar")
+
+
 def test_sem_consentimento_retorna_422(client):
     resp = client.post("/atendimentos", json={"modo": "libras", "consentimento": False})
     assert resp.status_code == 422
@@ -88,7 +101,7 @@ def test_libras_pula_prioridade_e_recebe_preferencial(client):
     a = iniciar(client, "libras")
     perguntadas = responder_tudo(client, a["id"], {"motivo": "consulta"})
     assert "prioridade" not in perguntadas
-    final = client.post(f"/atendimentos/{a['id']}/finalizar").json()
+    final = finalizar(client, a['id']).json()
     assert final["senha"]["codigo"] == "P001"
     assert "P 0 0 1" in final["mensagem_final"]
 
@@ -96,22 +109,22 @@ def test_libras_pula_prioridade_e_recebe_preferencial(client):
 def test_toque_sem_prioridade_recebe_normal(client):
     a = iniciar(client, "toque")
     responder_tudo(client, a["id"], {"motivo": "retorno", "prioridade": "nao"})
-    final = client.post(f"/atendimentos/{a['id']}/finalizar").json()
+    final = finalizar(client, a['id']).json()
     assert final["senha"]["codigo"] == "N001"
 
 
 def test_toque_com_prioridade_recebe_preferencial(client):
     a = iniciar(client, "toque")
     responder_tudo(client, a["id"], {"motivo": "retorno", "prioridade": "sim"})
-    final = client.post(f"/atendimentos/{a['id']}/finalizar").json()
+    final = finalizar(client, a['id']).json()
     assert final["senha"]["tipo"] == "preferencial"
 
 
 def test_finalizar_duas_vezes_retorna_409(client):
     a = iniciar(client, "libras")
     responder_tudo(client, a["id"], {"motivo": "exame"})
-    assert client.post(f"/atendimentos/{a['id']}/finalizar").status_code == 200
-    assert client.post(f"/atendimentos/{a['id']}/finalizar").status_code == 409
+    assert finalizar(client, a['id']).status_code == 200
+    assert finalizar(client, a['id']).status_code == 409
     assert responder(client, a["id"], "motivo", "exame").status_code == 409
 
 
@@ -125,7 +138,7 @@ def test_finalizar_grava_queixa_e_resumo(client, session):
         "motivo": "sintoma", "sintoma": "dor", "local_dor": "peito",
         "intensidade": 9, "desde_quando": "hoje",
     })
-    client.post(f"/atendimentos/{a['id']}/finalizar")
+    finalizar(client, a['id'])
 
     atendimento = session.get(Atendimento, a["id"])
     assert atendimento.status == "finalizado"
