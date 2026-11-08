@@ -18,8 +18,12 @@ ramificação das perguntas, emite a senha e monta o resumo para a recepção.
    não casa com nenhuma opção, nada é gravado e a resposta vem com `repetir: true`.
 4. `PUT /atendimentos/{id}/identificacao` `{nome, cpf}` — obrigatório antes de finalizar
    (`identificado` na resposta indica se já foi feito).
-5. `POST /atendimentos/{id}/finalizar` — emite a senha e devolve a mensagem final.
-6. `GET /atendimentos/{id}` — estado atual, para retomar se a tela recarregar.
+5. `GET /atendimentos/{id}/conferencia` — resumo das respostas para o paciente conferir
+   (`texto` para VLibras/voz e `itens` para a tela). Se algo estiver errado,
+   `DELETE /atendimentos/{id}/respostas/{pergunta_id}` volta a triagem para aquela pergunta
+   (apaga ela e as seguintes) e o fluxo segue do passo 3.
+6. `POST /atendimentos/{id}/finalizar` — emite a senha e devolve a mensagem final.
+7. `GET /atendimentos/{id}` — estado atual, para retomar se a tela recarregar.
 
 Modos `libras` e `voz` recebem senha **preferencial** automaticamente (Lei 10.048/2000).
 

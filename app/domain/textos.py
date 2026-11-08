@@ -13,6 +13,8 @@ TEXTOS: dict[str, str] = {
     ),
     "identificacao": "Agora digite seu nome completo e seu CPF na tela.",
     "repetir": "Não entendi. Pode repetir ou tocar na opção na tela?",
+    "conferir_inicio": "Vamos conferir suas respostas.",
+    "conferir_fim": "Está tudo certo? Se algo estiver errado, escolha a resposta que quer corrigir.",
     "finalizado": "Pronto! Sua senha é {senha}. Aguarde ser chamado.",
     "finalizado_preferencial": (
         "Pronto! Sua senha é {senha}, de atendimento prioritário. Aguarde ser chamado."

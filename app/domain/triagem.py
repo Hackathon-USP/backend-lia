@@ -44,6 +44,7 @@ class Opcao:
 class Pergunta:
     id: str
     texto: str
+    titulo: str  # rótulo curto usado no resumo de conferência (ex.: "Onde dói")
     tipo: TipoPergunta
     opcoes: tuple[Opcao, ...] = ()
     minimo: int | None = None
@@ -71,6 +72,7 @@ NUMEROS_POR_EXTENSO = {
 PERGUNTAS: tuple[Pergunta, ...] = (
     Pergunta(
         id="motivo",
+        titulo="Motivo da vinda",
         texto="Qual o motivo da sua vinda hoje?",
         tipo=TipoPergunta.opcoes,
         opcoes=(
@@ -83,6 +85,7 @@ PERGUNTAS: tuple[Pergunta, ...] = (
     ),
     Pergunta(
         id="sintoma",
+        titulo="O que sente",
         texto="O que você está sentindo?",
         tipo=TipoPergunta.opcoes,
         opcoes=(
@@ -98,6 +101,7 @@ PERGUNTAS: tuple[Pergunta, ...] = (
     ),
     Pergunta(
         id="local_dor",
+        titulo="Onde dói",
         texto="Onde é a dor?",
         tipo=TipoPergunta.opcoes,
         opcoes=(
@@ -111,6 +115,7 @@ PERGUNTAS: tuple[Pergunta, ...] = (
     ),
     Pergunta(
         id="intensidade",
+        titulo="Intensidade",
         texto="De 0 a 10, quanto está incomodando? 0 é nada e 10 é o pior possível.",
         tipo=TipoPergunta.escala,
         minimo=0,
@@ -119,6 +124,7 @@ PERGUNTAS: tuple[Pergunta, ...] = (
     ),
     Pergunta(
         id="desde_quando",
+        titulo="Desde quando",
         texto="Desde quando você está assim?",
         tipo=TipoPergunta.opcoes,
         opcoes=(
@@ -131,6 +137,7 @@ PERGUNTAS: tuple[Pergunta, ...] = (
     ),
     Pergunta(
         id="prioridade",
+        titulo="Atendimento prioritário",
         texto=(
             "Você tem direito a atendimento prioritário? Pessoa com deficiência, "
             "60 anos ou mais, gestante, lactante, com criança de colo ou com autismo."
