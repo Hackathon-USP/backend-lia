@@ -4,7 +4,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha, TipoSenha
-from app.domain.triagem import Pergunta, TipoPergunta
+from app.domain.entidades import RelatorioTriagem
+from app.domain.triagem import OrigemPergunta, Pergunta, TipoPergunta
 
 
 class SenhaCriar(BaseModel):
@@ -34,6 +35,12 @@ class PerguntaLeitura(BaseModel):
     opcoes: list[OpcaoLeitura] = []
     minimo: int | None = None
     maximo: int | None = None
+    origem: OrigemPergunta = Field(
+        default=OrigemPergunta.triagem,
+        description=(
+            "`triagem` = pergunta fixa; `lia` = pergunta complementar criada pela LIA (IA) para este paciente."
+        ),
+    )
 
     @classmethod
     def de(cls, pergunta: Pergunta | None) -> "PerguntaLeitura | None":
@@ -50,6 +57,7 @@ class PerguntaLeitura(BaseModel):
             ],
             minimo=pergunta.minimo,
             maximo=pergunta.maximo,
+            origem=pergunta.origem,
         )
 
 
@@ -149,6 +157,7 @@ class RespostaRotulada(BaseModel):
     valor: Any
     resposta: str = Field(description="Texto legível da opção escolhida (ex.: 'Falta de ar').")
     canal: str | None = None
+    da_lia: bool = Field(default=False, description="Pergunta complementar feita pela LIA (IA).")
 
 
 class QueixaLeitura(BaseModel):
@@ -158,11 +167,36 @@ class QueixaLeitura(BaseModel):
     desde_quando: str | None = None
 
 
+class RelatorioLeitura(BaseModel):
+    """Relatório da triagem para a recepção e a enfermagem.
+
+    Não é diagnóstico nem classificação de risco (que é da enfermagem).
+    """
+
+    queixa_principal: str
+    resumo: str = Field(description="De 2 a 4 frases com o que o paciente relatou.")
+    sinais_de_alerta: list[str] = Field(description="Sempre inclui os alertas automáticos da triagem.")
+    pontos_a_confirmar: list[str] = Field(description="O que a equipe deve conferir com o paciente.")
+    orientacao_recepcao: str = Field(description="Como receber o paciente no guichê.")
+    gerado_por: Literal["ia", "regras"] = Field(
+        description="`ia` = escrito pela LIA (GPT); `regras` = montado sem IA, só com as respostas."
+    )
+    modelo: str | None = Field(default=None, description="Modelo de IA usado, quando `gerado_por` = `ia`.")
+    gerado_em: datetime
+
+    @classmethod
+    def de(cls, relatorio: RelatorioTriagem | None) -> "RelatorioLeitura | None":
+        return cls.model_validate(relatorio, from_attributes=True) if relatorio else None
+
+
 class AtendimentoDetalhe(AtendimentoResumo):
     senha_detalhe: SenhaLeitura | None = None
     resumo: str | None = None
     respostas: list[RespostaRotulada]
     queixa: QueixaLeitura | None = None
+    relatorio: RelatorioLeitura | None = Field(
+        default=None, description="null enquanto o relatório é preparado (sai segundos depois da senha)."
+    )
 
 
 class Chamada(BaseModel):
@@ -173,6 +207,7 @@ class Chamada(BaseModel):
     cpf: str | None = None
     alertas: list[str] = []
     resumo: str | None = None
+    relatorio: RelatorioLeitura | None = None
 
 
 class SenhaStatusAtualizar(BaseModel):

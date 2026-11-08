@@ -8,18 +8,20 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.dependencias import servico_recepcao
+from app.api.dependencias import servico_recepcao, servico_relatorio
 from app.api.schemas import (
     AtendimentoDetalhe,
     AtendimentoResumo,
     Chamada,
     ItemFila,
     QueixaLeitura,
+    RelatorioLeitura,
     RespostaRotulada,
     SenhaLeitura,
     SenhaStatusAtualizar,
 )
 from app.application.recepcao import AtendimentoListado, SenhaNaFila, ServicoRecepcao
+from app.application.relatorios import ServicoRelatorio
 from app.domain.entidades import Atendimento, Identificacao, Senha
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha
 from app.domain.identificacao import formatar_cpf
@@ -105,7 +107,7 @@ def listar_atendimentos(
 
 @router.get("/atendimentos/{atendimento_id}", response_model=AtendimentoDetalhe)
 def detalhar_atendimento(atendimento_id: int, servico: ServicoRecepcao = Depends(servico_recepcao)):
-    """Tudo que o paciente informou, com textos legíveis, resumo e alertas."""
+    """Tudo que o paciente informou, com textos legíveis, resumo, alertas e o relatório da triagem."""
     detalhe = servico.detalhar_atendimento(atendimento_id)
     return AtendimentoDetalhe(
         **_resumo(detalhe).model_dump(),
@@ -113,7 +115,18 @@ def detalhar_atendimento(atendimento_id: int, servico: ServicoRecepcao = Depends
         resumo=detalhe.atendimento.resumo,
         respostas=[RespostaRotulada.model_validate(r, from_attributes=True) for r in detalhe.respostas],
         queixa=QueixaLeitura.model_validate(detalhe.queixa, from_attributes=True) if detalhe.queixa else None,
+        relatorio=RelatorioLeitura.de(detalhe.relatorio),
     )
+
+
+@router.post("/atendimentos/{atendimento_id}/relatorio", response_model=RelatorioLeitura)
+def gerar_relatorio(atendimento_id: int, servico: ServicoRelatorio = Depends(servico_relatorio)):
+    """Gera de novo o relatório da triagem (com IA, se configurada; senão, por regras).
+
+    O relatório já sai sozinho logo depois da senha; use esta rota se ele não apareceu
+    ou para refazê-lo. 409 se o atendimento ainda não foi finalizado.
+    """
+    return RelatorioLeitura.de(servico.gerar(atendimento_id))
 
 
 @router.post("/chamar", response_model=Chamada)
@@ -125,6 +138,7 @@ def chamar(servico: ServicoRecepcao = Depends(servico_recepcao)):
         senha=_senha_leitura(item.senha),
         **_dados_do_paciente(item.atendimento, item.identificacao),
         resumo=item.atendimento.resumo if item.atendimento else None,
+        relatorio=RelatorioLeitura.de(item.relatorio),
     )
 
 

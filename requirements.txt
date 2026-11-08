@@ -3,6 +3,7 @@ uvicorn[standard]>=0.30
 sqlmodel>=0.0.22
 pydantic-settings>=2.4
 tzdata  # base de fusos para o ZoneInfo no Windows
+openai>=3.46,<4  # IA da LIA (opcional: sem OPENAI_API_KEY o back funciona sem ela)
 
 # testes
 pytest>=8

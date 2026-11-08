@@ -8,7 +8,7 @@ mexe em regra de negócio.
 from datetime import date
 from typing import Protocol
 
-from app.domain.entidades import Atendimento, Identificacao, Queixa, Senha
+from app.domain.entidades import Atendimento, Identificacao, PerguntasDaLia, Queixa, RelatorioTriagem, Senha
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha, TipoSenha
 
 
@@ -66,6 +66,20 @@ class RepositorioQueixas(Protocol):
     def do_atendimento(self, atendimento_id: int) -> Queixa | None: ...
 
 
+class RepositorioPerguntasDaLia(Protocol):
+    def obter(self, atendimento_id: int) -> PerguntasDaLia | None: ...
+
+    def salvar(self, perguntas: PerguntasDaLia) -> PerguntasDaLia:
+        """Insere ou substitui as perguntas da LIA do atendimento."""
+
+
+class RepositorioRelatorios(Protocol):
+    def obter(self, atendimento_id: int) -> RelatorioTriagem | None: ...
+
+    def salvar(self, relatorio: RelatorioTriagem) -> RelatorioTriagem:
+        """Insere ou substitui o relatório do atendimento."""
+
+
 class UnidadeDeTrabalho(Protocol):
     """Agrupa os repositórios de uma transação. Nada fica gravado até `commit()`."""
 
@@ -73,5 +87,7 @@ class UnidadeDeTrabalho(Protocol):
     atendimentos: RepositorioAtendimentos
     identificacoes: RepositorioIdentificacoes
     queixas: RepositorioQueixas
+    perguntas_da_lia: RepositorioPerguntasDaLia
+    relatorios: RepositorioRelatorios
 
     def commit(self) -> None: ...

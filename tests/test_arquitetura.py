@@ -1,6 +1,7 @@
 """Garante a regra de dependência da Clean Architecture: as camadas só importam para dentro.
 
     api -> application -> domain <- persistence
+                          domain <- ia
 """
 
 import ast
@@ -11,9 +12,14 @@ import pytest
 APP = Path(__file__).resolve().parent.parent / "app"
 
 PROIBIDOS = {
-    "domain": ("app.application", "app.persistence", "app.api", "app.config", "fastapi", "sqlmodel", "sqlalchemy"),
-    "application": ("app.persistence", "app.api", "fastapi", "sqlmodel", "sqlalchemy"),
-    "persistence": ("app.application", "app.api", "fastapi"),
+    "domain": (
+        "app.application", "app.persistence", "app.api", "app.ia", "app.config",
+        "fastapi", "sqlmodel", "sqlalchemy", "openai",
+    ),
+    "application": ("app.persistence", "app.api", "app.ia", "fastapi", "sqlmodel", "sqlalchemy", "openai"),
+    "persistence": ("app.application", "app.api", "app.ia", "fastapi"),
+    # A IA só conhece o domínio; a configuração (chave, modelo) chega pela API.
+    "ia": ("app.application", "app.persistence", "app.api", "app.config", "fastapi", "sqlmodel", "sqlalchemy"),
 }
 
 

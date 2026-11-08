@@ -11,14 +11,16 @@ from sqlalchemy import update
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlmodel import Session, SQLModel, select
 
-from app.domain.entidades import Atendimento, Identificacao, Queixa, Senha
+from app.domain.entidades import Atendimento, Identificacao, PerguntasDaLia, Queixa, RelatorioTriagem, Senha
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha, TipoSenha
 from app.persistence.mapeadores import copiar_para_linha, para_entidade
 from app.persistence.tabelas import (
     AtendimentoTabela,
     ContadorSenhaTabela,
     IdentificacaoTabela,
+    PerguntasDaLiaTabela,
     QueixaTabela,
+    RelatorioTabela,
     SenhaTabela,
 )
 
@@ -180,3 +182,25 @@ class RepositorioQueixasSql(_RepositorioSql[Queixa]):
     def do_atendimento(self, atendimento_id: int) -> Queixa | None:
         consulta = select(QueixaTabela).where(QueixaTabela.atendimento_id == atendimento_id)
         return self._para_entidade(self.session.exec(consulta).first())
+
+
+class RepositorioPerguntasDaLiaSql(_RepositorioSql[PerguntasDaLia]):
+    tabela = PerguntasDaLiaTabela
+    entidade = PerguntasDaLia
+
+    def obter(self, atendimento_id: int) -> PerguntasDaLia | None:
+        return self._obter(atendimento_id)
+
+    def salvar(self, perguntas: PerguntasDaLia) -> PerguntasDaLia:
+        return self._gravar(perguntas, perguntas.atendimento_id)
+
+
+class RepositorioRelatoriosSql(_RepositorioSql[RelatorioTriagem]):
+    tabela = RelatorioTabela
+    entidade = RelatorioTriagem
+
+    def obter(self, atendimento_id: int) -> RelatorioTriagem | None:
+        return self._obter(atendimento_id)
+
+    def salvar(self, relatorio: RelatorioTriagem) -> RelatorioTriagem:
+        return self._gravar(relatorio, relatorio.atendimento_id)

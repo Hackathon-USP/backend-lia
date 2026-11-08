@@ -74,3 +74,29 @@ class QueixaTabela(SQLModel, table=True):
     intensidade: int | None = None
     desde_quando: str | None = None
     criada_em: datetime
+
+
+class PerguntasDaLiaTabela(SQLModel, table=True):
+    """Perguntas complementares da LIA (IA). Tabela própria, criada sem ALTER TABLE."""
+
+    __tablename__ = "perguntas_da_lia"
+
+    atendimento_id: int = Field(foreign_key="atendimento.id", primary_key=True)
+    perguntas: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    encerradas: bool = False
+
+
+class RelatorioTabela(SQLModel, table=True):
+    """Relatório da triagem para a recepção (um por atendimento finalizado)."""
+
+    __tablename__ = "relatorio"
+
+    atendimento_id: int = Field(foreign_key="atendimento.id", primary_key=True)
+    queixa_principal: str
+    resumo: str
+    sinais_de_alerta: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    pontos_a_confirmar: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
+    orientacao_recepcao: str
+    gerado_por: str
+    gerado_em: datetime
+    modelo: str | None = None
