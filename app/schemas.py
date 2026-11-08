@@ -88,3 +88,61 @@ class FinalizacaoLeitura(BaseModel):
     atendimento_id: int
     senha: SenhaLeitura
     mensagem_final: str
+
+
+# --- Recepção ---------------------------------------------------------------
+
+
+class ItemFila(BaseModel):
+    codigo: str
+    tipo: TipoSenha
+    status: StatusSenha
+    criada_em: datetime
+    # Vazios quando a senha foi emitida direto em POST /senhas, sem triagem.
+    atendimento_id: int | None = None
+    modo: ModoAcessibilidade | None = None
+    alertas: list[str] = []
+
+
+class AtendimentoResumo(BaseModel):
+    id: int
+    modo: ModoAcessibilidade
+    status: StatusAtendimento
+    senha: str | None = None
+    alertas: list[str] = []
+    criado_em: datetime
+    finalizado_em: datetime | None = None
+
+
+class RespostaRotulada(BaseModel):
+    pergunta_id: str
+    pergunta: str
+    valor: Any
+    resposta: str = Field(description="Texto legível da opção escolhida (ex.: 'Falta de ar').")
+    canal: str | None = None
+
+
+class QueixaLeitura(BaseModel):
+    sintoma: str
+    local: str | None = None
+    intensidade: int | None = None
+    desde_quando: str | None = None
+
+
+class AtendimentoDetalhe(AtendimentoResumo):
+    senha_detalhe: SenhaLeitura | None = None
+    resumo: str | None = None
+    respostas: list[RespostaRotulada]
+    queixa: QueixaLeitura | None = None
+
+
+class Chamada(BaseModel):
+    senha: SenhaLeitura
+    atendimento_id: int | None = None
+    modo: ModoAcessibilidade | None = None
+    alertas: list[str] = []
+    resumo: str | None = None
+
+
+class SenhaStatusAtualizar(BaseModel):
+    status: StatusSenha

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import init_db
-from app.routers import atendimentos, conteudo, senhas
+from app.routers import atendimentos, conteudo, recepcao, senhas
 
 
 @asynccontextmanager
@@ -34,12 +34,18 @@ ramificação das perguntas, emite a senha e monta o resumo para a recepção.
 5. `GET /atendimentos/{id}` — estado atual, para retomar se a tela recarregar.
 
 Modos `libras` e `voz` recebem senha **preferencial** automaticamente (Lei 10.048/2000).
+
+### Tela da recepção (`/recepcao`)
+`GET /recepcao/fila` (senhas do dia com alertas), `POST /recepcao/chamar` (próxima senha),
+`GET /recepcao/atendimentos` e `GET /recepcao/atendimentos/{id}` (resumo e respostas).
+**Ainda sem autenticação** — não usar com dados reais antes de proteger.
 """
 
 TAGS = [
     {"name": "conteudo", "description": "Textos e perguntas fixas, pré-carregadas pelo front."},
     {"name": "atendimentos", "description": "Sessão de triagem do paciente, da abertura à senha."},
     {"name": "senhas", "description": "Emissão e consulta de senhas da fila."},
+    {"name": "recepcao", "description": "Fila do dia, detalhe dos atendimentos e chamada de senhas."},
     {"name": "infra", "description": "Verificação de saúde do serviço."},
 ]
 
@@ -61,6 +67,7 @@ app.add_middleware(
 app.include_router(senhas.router)
 app.include_router(atendimentos.router)
 app.include_router(conteudo.router)
+app.include_router(recepcao.router)
 
 
 @app.get("/saude", tags=["infra"])
