@@ -29,6 +29,7 @@ class OpcaoLeitura(BaseModel):
 class PerguntaLeitura(BaseModel):
     id: str
     texto: str
+    titulo: str = Field(description="Rótulo curto da pergunta, usado no resumo de conferência.")
     tipo: TipoPergunta
     opcoes: list[OpcaoLeitura] = []
     minimo: int | None = None
@@ -41,6 +42,7 @@ class PerguntaLeitura(BaseModel):
         return cls(
             id=pergunta.id,
             texto=pergunta.texto,
+            titulo=pergunta.titulo,
             tipo=pergunta.tipo,
             opcoes=[
                 OpcaoLeitura(id=o.id, rotulo=o.rotulo, sinais=list(o.sinais))
@@ -89,6 +91,22 @@ class AtendimentoLeitura(BaseModel):
     repetir: bool = False
     mensagem: str | None = None
     criado_em: datetime
+
+
+class ItemConferenciaLeitura(BaseModel):
+    pergunta_id: str
+    titulo: str = Field(description="Ex.: 'Onde dói'.")
+    pergunta: str
+    resposta: str = Field(description="Texto legível da resposta (ex.: 'Peito', '9 de 10').")
+
+
+class ConferenciaLeitura(BaseModel):
+    atendimento_id: int
+    itens: list[ItemConferenciaLeitura] = Field(description="Respostas na ordem da triagem.")
+    texto: str = Field(description="Resumo completo numa frase, para VLibras e síntese de voz.")
+    pode_finalizar: bool = Field(
+        description="true = triagem completa e nome/CPF informados; o paciente pode confirmar e finalizar."
+    )
 
 
 class FinalizacaoLeitura(BaseModel):

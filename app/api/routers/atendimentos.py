@@ -6,8 +6,10 @@ from app.api.dependencias import servico_atendimento
 from app.api.schemas import (
     AtendimentoCriar,
     AtendimentoLeitura,
+    ConferenciaLeitura,
     FinalizacaoLeitura,
     IdentificacaoCriar,
+    ItemConferenciaLeitura,
     PerguntaLeitura,
     RespostaCriar,
     SenhaLeitura,
@@ -60,6 +62,37 @@ def responder(
     """
     estado = servico.responder(atendimento_id, dados.pergunta_id, dados.valor, dados.canal, dados.confianca)
     return _para_leitura(estado)
+
+
+@router.get("/{atendimento_id}/conferencia", response_model=ConferenciaLeitura)
+def conferir(atendimento_id: int, servico: ServicoAtendimento = Depends(servico_atendimento)):
+    """Resumo das respostas para o paciente conferir antes de receber a senha.
+
+    `texto` vai para o VLibras/voz; `itens` para a tela, cada um com o `pergunta_id` que
+    o front manda em `DELETE .../respostas/{pergunta_id}` se o paciente quiser corrigir.
+    Nome e CPF não aparecem (a tela do totem é pública).
+    """
+    resultado = servico.conferir(atendimento_id)
+    return ConferenciaLeitura(
+        atendimento_id=resultado.atendimento.id,
+        itens=[ItemConferenciaLeitura.model_validate(i, from_attributes=True) for i in resultado.conferencia.itens],
+        texto=resultado.conferencia.texto,
+        pode_finalizar=resultado.pode_finalizar,
+    )
+
+
+@router.delete("/{atendimento_id}/respostas/{pergunta_id}", response_model=AtendimentoLeitura)
+def corrigir(
+    atendimento_id: int,
+    pergunta_id: str,
+    servico: ServicoAtendimento = Depends(servico_atendimento),
+):
+    """Volta a triagem para `pergunta_id`: apaga essa resposta e as de todas as perguntas
+    seguintes (que dependem dela). A resposta traz `proxima_pergunta` = a pergunta corrigida.
+
+    Use quando o paciente apontar um erro no resumo de conferência.
+    """
+    return _para_leitura(servico.corrigir(atendimento_id, pergunta_id))
 
 
 @router.put("/{atendimento_id}/identificacao", response_model=AtendimentoLeitura)

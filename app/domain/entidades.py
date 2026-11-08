@@ -123,6 +123,17 @@ class Atendimento:
         self.canais = {**self.canais, pergunta_id: canal.value}
         return True
 
+    def voltar_para(self, pergunta_id: str) -> None:
+        """Apaga a resposta de `pergunta_id` e as de todas as perguntas depois dela,
+        para o paciente responder de novo a partir dali (as seguintes dependem desta)."""
+        self.garantir_em_andamento()
+        if pergunta_id not in self.respostas:
+            raise RespostaInvalida(f"Pergunta ainda não respondida: {pergunta_id}")
+        inicio = triagem.posicao_no_fluxo(pergunta_id)
+        mantidas = [pid for pid in self.respostas if triagem.posicao_no_fluxo(pid) < inicio]
+        self.respostas = {pid: self.respostas[pid] for pid in mantidas}
+        self.canais = {pid: canal for pid, canal in self.canais.items() if pid in mantidas}
+
     def tipo_de_senha(self) -> TipoSenha:
         """Libras e voz são sempre preferenciais (Lei 10.048/2000); no toque, quem declarou."""
         usa_recurso_de_acessibilidade = self.modo != ModoAcessibilidade.toque

@@ -6,6 +6,7 @@ from typing import Any
 
 from app.application.relogio import agora_local
 from app.application.senhas import emitir_sem_commit
+from app.domain.conferencia import Conferencia, gerar_conferencia
 from app.domain.entidades import Atendimento, Identificacao, Queixa, Senha
 from app.domain.enums import ModoAcessibilidade
 from app.domain.erros import AtendimentoNaoEncontrado, IdentificacaoPendente, TriagemIncompleta
@@ -22,6 +23,15 @@ class EstadoAtendimento:
     proxima_pergunta: Pergunta | None
     identificado: bool
     repetir: bool = False  # a última resposta não foi entendida; pedir de novo
+
+
+@dataclass
+class ConferenciaAtendimento:
+    """Resumo das respostas para o paciente conferir antes de finalizar."""
+
+    atendimento: Atendimento
+    conferencia: Conferencia
+    pode_finalizar: bool  # triagem completa e nome/CPF informados
 
 
 @dataclass
@@ -65,6 +75,16 @@ class ServicoAtendimento:
     def consultar(self, atendimento_id: int) -> EstadoAtendimento:
         return self._estado(self.obter(atendimento_id))
 
+    def conferir(self, atendimento_id: int) -> ConferenciaAtendimento:
+        """Resumo do que o paciente respondeu, para ele confirmar antes da senha."""
+        estado = self.consultar(atendimento_id)
+        triagem_completa = estado.proxima_pergunta is None
+        return ConferenciaAtendimento(
+            atendimento=estado.atendimento,
+            conferencia=gerar_conferencia(estado.atendimento.respostas),
+            pode_finalizar=triagem_completa and estado.identificado and not estado.atendimento.finalizado,
+        )
+
     # --- Comandos -------------------------------------------------------------
 
     def iniciar(self, modo: ModoAcessibilidade, agora: datetime | None = None) -> EstadoAtendimento:
@@ -86,6 +106,14 @@ class ServicoAtendimento:
             atendimento = self.uow.atendimentos.salvar(atendimento)
             self.uow.commit()
         return self._estado(atendimento, repetir=not gravou)
+
+    def corrigir(self, atendimento_id: int, pergunta_id: str) -> EstadoAtendimento:
+        """Volta a triagem para `pergunta_id`, apagando essa resposta e as seguintes."""
+        atendimento = self.obter(atendimento_id)
+        atendimento.voltar_para(pergunta_id)
+        atendimento = self.uow.atendimentos.salvar(atendimento)
+        self.uow.commit()
+        return self._estado(atendimento)
 
     def identificar(
         self, atendimento_id: int, nome: str, cpf: str, agora: datetime | None = None
