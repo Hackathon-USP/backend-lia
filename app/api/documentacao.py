@@ -46,6 +46,13 @@ são enviadas: **nome e CPF nunca vão para a IA**. A IA não faz diagnóstico n
 classificação de risco (é da enfermagem). Sem a chave, ou se a IA falhar ou demorar, a
 triagem segue só com as perguntas fixas e o relatório é montado por regras
 (`gerado_por: "regras"`).
+
+### Treino do reconhecimento de Libras (`/libras`)
+A página `/treinar` do front faz o avatar do VLibras sinalizar cada glosa, extrai os
+pontos das mãos e do tronco e envia as amostras (`POST /libras/amostras`). Os totens
+baixam com `GET /libras/amostras?depois_de=<cursor>` (só o que é novo) e treinam o
+reconhecimento no próprio navegador. Por padrão o servidor só aceita a fonte `vlibras`
+(`FONTES_AMOSTRAS_LIBRAS`): gravações de pessoas são dados pessoais.
 """
 
 TAGS = [
@@ -53,5 +60,6 @@ TAGS = [
     {"name": "atendimentos", "description": "Sessão de triagem do paciente, da abertura à senha."},
     {"name": "senhas", "description": "Emissão e consulta de senhas da fila."},
     {"name": "recepcao", "description": "Fila do dia, detalhe dos atendimentos e chamada de senhas."},
+    {"name": "libras", "description": "Amostras para treinar o reconhecimento de sinais (avatar do VLibras)."},
     {"name": "infra", "description": "Verificação de saúde do serviço."},
 ]

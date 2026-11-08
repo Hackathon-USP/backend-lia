@@ -100,3 +100,26 @@ class RelatorioTabela(SQLModel, table=True):
     gerado_por: str
     gerado_em: datetime
     modelo: str | None = None
+
+
+class AmostraLibrasTabela(SQLModel, table=True):
+    """Amostras para treinar o reconhecimento de Libras (formato `lia-raw-1` do front).
+
+    `seq` é a ordem de chegada: os totens baixam só o que chegou depois da última sincronização.
+    """
+
+    __tablename__ = "amostra_libras"
+
+    seq: int | None = Field(default=None, primary_key=True)
+    id: str = Field(index=True, unique=True)
+    glosa: str = Field(index=True)
+    fonte: str = Field(index=True)
+    sinalizante: str
+    origem: str | None = None
+    formato: str
+    largura: int
+    altura: int
+    quadros: list[list[float]] = Field(sa_column=Column(JSON, nullable=False))
+    qualidade: dict[str, float] = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
+    gravada_em: str
+    recebida_em: datetime

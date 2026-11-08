@@ -4,17 +4,20 @@ Os repositórios só fazem `flush` (para gerar ids); quem decide o `commit` é o
 caso de uso, pela unidade de trabalho.
 """
 
+from dataclasses import fields
 from datetime import date
 from typing import Any, Generic, TypeVar
 
-from sqlalchemy import update
+from sqlalchemy import delete, func, update
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlmodel import Session, SQLModel, select
 
+from app.domain.amostras_libras import AmostraLibras
 from app.domain.entidades import Atendimento, Identificacao, PerguntasDaLia, Queixa, RelatorioTriagem, Senha
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha, TipoSenha
 from app.persistence.mapeadores import copiar_para_linha, para_entidade
 from app.persistence.tabelas import (
+    AmostraLibrasTabela,
     AtendimentoTabela,
     ContadorSenhaTabela,
     IdentificacaoTabela,
@@ -204,3 +207,55 @@ class RepositorioRelatoriosSql(_RepositorioSql[RelatorioTriagem]):
 
     def salvar(self, relatorio: RelatorioTriagem) -> RelatorioTriagem:
         return self._gravar(relatorio, relatorio.atendimento_id)
+
+
+class RepositorioAmostrasLibrasSql(_RepositorioSql[AmostraLibras]):
+    tabela = AmostraLibrasTabela
+    entidade = AmostraLibras
+
+    def _para_entidade(self, linha: SQLModel | None) -> AmostraLibras | None:
+        # Sem a cópia profunda do mapeador genérico: cada amostra tem ~10 mil números e as
+        # linhas lidas aqui não são alteradas depois (as amostras nunca são editadas).
+        if linha is None:
+            return None
+        return AmostraLibras(**{campo.name: getattr(linha, campo.name) for campo in fields(AmostraLibras)})
+
+    def ids_existentes(self, ids: list[str]) -> set[str]:
+        if not ids:
+            return set()
+        consulta = select(AmostraLibrasTabela.id).where(AmostraLibrasTabela.id.in_(ids))
+        return set(self.session.exec(consulta).all())
+
+    def adicionar(self, amostra: AmostraLibras) -> AmostraLibras:
+        return self._gravar(amostra, None)
+
+    def _filtrar(self, consulta, fonte: str | None, glosa: str | None):
+        if fonte is not None:
+            consulta = consulta.where(AmostraLibrasTabela.fonte == fonte)
+        if glosa is not None:
+            consulta = consulta.where(AmostraLibrasTabela.glosa == glosa)
+        return consulta
+
+    def listar(
+        self,
+        fonte: str | None = None,
+        glosa: str | None = None,
+        depois_de: int = 0,
+        limite: int = 100,
+    ) -> list[AmostraLibras]:
+        consulta = self._filtrar(select(AmostraLibrasTabela), fonte, glosa)
+        consulta = consulta.where(AmostraLibrasTabela.seq > depois_de)
+        return self._listar(consulta.order_by(AmostraLibrasTabela.seq).limit(limite))
+
+    def contagens(self, fonte: str | None = None) -> list[tuple[str, str, str, int]]:
+        t = AmostraLibrasTabela
+        consulta = self._filtrar(
+            select(t.glosa, t.fonte, t.sinalizante, func.count()).group_by(t.glosa, t.fonte, t.sinalizante),
+            fonte,
+            None,
+        )
+        return [tuple(linha) for linha in self.session.exec(consulta).all()]
+
+    def remover(self, fonte: str | None = None, glosa: str | None = None) -> int:
+        comando = self._filtrar(delete(AmostraLibrasTabela), fonte, glosa)
+        return self.session.connection().execute(comando).rowcount

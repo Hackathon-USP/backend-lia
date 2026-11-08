@@ -8,6 +8,7 @@ mexe em regra de negócio.
 from datetime import date
 from typing import Protocol
 
+from app.domain.amostras_libras import AmostraLibras
 from app.domain.entidades import Atendimento, Identificacao, PerguntasDaLia, Queixa, RelatorioTriagem, Senha
 from app.domain.enums import ModoAcessibilidade, StatusAtendimento, StatusSenha, TipoSenha
 
@@ -80,6 +81,28 @@ class RepositorioRelatorios(Protocol):
         """Insere ou substitui o relatório do atendimento."""
 
 
+class RepositorioAmostrasLibras(Protocol):
+    def ids_existentes(self, ids: list[str]) -> set[str]:
+        """Quais destes ids já estão gravados."""
+
+    def adicionar(self, amostra: AmostraLibras) -> AmostraLibras: ...
+
+    def listar(
+        self,
+        fonte: str | None = None,
+        glosa: str | None = None,
+        depois_de: int = 0,
+        limite: int = 100,
+    ) -> list[AmostraLibras]:
+        """Em ordem de chegada (`seq`), só as com `seq` > `depois_de`."""
+
+    def contagens(self, fonte: str | None = None) -> list[tuple[str, str, str, int]]:
+        """(glosa, fonte, sinalizante, quantidade) de cada combinação gravada."""
+
+    def remover(self, fonte: str | None = None, glosa: str | None = None) -> int:
+        """Apaga as que casam com os filtros e devolve quantas foram apagadas."""
+
+
 class UnidadeDeTrabalho(Protocol):
     """Agrupa os repositórios de uma transação. Nada fica gravado até `commit()`."""
 
@@ -89,5 +112,6 @@ class UnidadeDeTrabalho(Protocol):
     queixas: RepositorioQueixas
     perguntas_da_lia: RepositorioPerguntasDaLia
     relatorios: RepositorioRelatorios
+    amostras_libras: RepositorioAmostrasLibras
 
     def commit(self) -> None: ...

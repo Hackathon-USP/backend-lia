@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # aceitos dependem do modelo: o gpt-6-luna aceita none, low, medium, high, xhigh e max.
     ia_esforco_pergunta: str = "none"
     ia_esforco_relatorio: str = "low"
+    # Fontes de amostras de Libras que o servidor aceita guardar (separe por vírgula).
+    # Padrão: só o avatar do VLibras. Gravações de pessoas ("proprio") são dados pessoais
+    # (LGPD) e as do V-LIBRASIL não podem ser redistribuídas: libere só com autorização.
+    fontes_amostras_libras: str = "vlibras"
 
 
 settings = Settings()

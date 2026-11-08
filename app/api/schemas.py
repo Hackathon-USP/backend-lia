@@ -212,3 +212,63 @@ class Chamada(BaseModel):
 
 class SenhaStatusAtualizar(BaseModel):
     status: StatusSenha
+
+
+# --- Amostras de Libras (treino do reconhecimento) --------------------------
+
+
+class AmostraLia(BaseModel):
+    """Uma gravação de sinal no formato do front (`lia-raw-1`). Os nomes dos campos seguem o
+    arquivo de dataset do front, para o totem importar a resposta sem conversão."""
+
+    id: str
+    gloss: str = Field(description="Glosa em maiúsculas, ex.: 'DOR'.")
+    source: str = Field(description="De onde veio: 'vlibras' para o avatar do VLibras.")
+    signer: str = Field(description="Quem sinalizou, ex.: 'vlibras-hosana'.")
+    createdAt: str
+    origin: str | None = None
+    format: Literal["lia-raw-1"] = "lia-raw-1"
+    width: int
+    height: int
+    frames: list[list[float]] = Field(description="152 números por quadro (tempo, flags, tronco e mãos).")
+    quality: dict[str, float] = {}
+
+
+class EnvioAmostras(BaseModel):
+    amostras: list[dict[str, Any]] = Field(
+        description="Até 100 amostras no formato de `AmostraLia`. Cada uma é validada separadamente."
+    )
+
+
+class AmostraRecusada(BaseModel):
+    indice: int = Field(description="Posição da amostra na lista enviada.")
+    motivo: str
+
+
+class EnvioAmostrasResultado(BaseModel):
+    adicionadas: int
+    ignoradas: int = Field(description="Já estavam no servidor (mesmo id).")
+    invalidas: list[AmostraRecusada] = []
+
+
+class DatasetLia(BaseModel):
+    """Mesmo formato do arquivo exportado pelo front: dá para passar direto a `dataset.import()`."""
+
+    kind: Literal["lia-dataset"] = "lia-dataset"
+    version: Literal[1] = 1
+    format: Literal["lia-raw-1"] = "lia-raw-1"
+    exportedAt: datetime
+    cursor: int = Field(description="Use em `depois_de` para buscar só o que chegou depois.")
+    tem_mais: bool = Field(description="true = há mais amostras; peça de novo com `depois_de=cursor`.")
+    samples: list[AmostraLia]
+
+
+class ResumoAmostrasLeitura(BaseModel):
+    total: int
+    por_glosa: dict[str, int]
+    por_fonte: dict[str, int]
+    por_sinalizante: dict[str, int]
+
+
+class RemocaoAmostras(BaseModel):
+    removidas: int

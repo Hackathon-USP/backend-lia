@@ -10,6 +10,7 @@ from functools import lru_cache
 from fastapi import Depends
 from sqlmodel import Session
 
+from app.application.amostras_libras import ServicoAmostrasLibras
 from app.application.atendimentos import ServicoAtendimento
 from app.application.recepcao import ServicoRecepcao
 from app.application.relatorios import ServicoRelatorio
@@ -81,3 +82,8 @@ def servico_relatorio(
     assistente: AssistenteTriagem | None = Depends(assistente_triagem),
 ) -> ServicoRelatorio:
     return ServicoRelatorio(uow, assistente)
+
+
+def servico_amostras_libras(uow: UnidadeDeTrabalho = Depends(unidade_de_trabalho)) -> ServicoAmostrasLibras:
+    fontes = frozenset(f.strip() for f in settings.fontes_amostras_libras.split(",") if f.strip())
+    return ServicoAmostrasLibras(uow, fontes_aceitas=fontes)
