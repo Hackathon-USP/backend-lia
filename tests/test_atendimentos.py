@@ -1,8 +1,3 @@
-from sqlmodel import select
-
-from app.models import Atendimento, Queixa
-
-
 def iniciar(client, modo="toque"):
     resp = client.post("/atendimentos", json={"modo": modo, "consentimento": True})
     assert resp.status_code == 201
@@ -132,7 +127,7 @@ def test_atendimento_inexistente_retorna_404(client):
     assert client.get("/atendimentos/999").status_code == 404
 
 
-def test_finalizar_grava_queixa_e_resumo(client, session):
+def test_finalizar_grava_queixa_e_resumo(client, uow):
     a = iniciar(client, "libras")
     responder_tudo(client, a["id"], {
         "motivo": "sintoma", "sintoma": "dor", "local_dor": "peito",
@@ -140,11 +135,11 @@ def test_finalizar_grava_queixa_e_resumo(client, session):
     })
     finalizar(client, a['id'])
 
-    atendimento = session.get(Atendimento, a["id"])
+    atendimento = uow.atendimentos.obter(a["id"])
     assert atendimento.status == "finalizado"
     assert "Dor no peito" in atendimento.alertas
     assert "Libras" in atendimento.resumo
-    queixa = session.exec(select(Queixa).where(Queixa.atendimento_id == a["id"])).one()
+    queixa = uow.queixas.do_atendimento(a["id"])
     assert (queixa.sintoma, queixa.local, queixa.intensidade) == ("dor", "peito", 9)
 
 

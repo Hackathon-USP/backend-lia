@@ -3,8 +3,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, create_engine
 
-from app.db import get_session, init_db
 from app.main import app
+from app.persistence.db import get_session, init_db
+from app.persistence.unidade_de_trabalho import UnidadeDeTrabalhoSql
 
 
 @pytest.fixture
@@ -21,6 +22,11 @@ def engine():
 def session(engine):
     with Session(engine) as s:
         yield s
+
+
+@pytest.fixture
+def uow(session):
+    return UnidadeDeTrabalhoSql(session)
 
 
 @pytest.fixture

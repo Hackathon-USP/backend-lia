@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.identificacao import formatar_cpf, normalizar_cpf, normalizar_nome
+from app.domain.identificacao import formatar_cpf, normalizar_cpf, normalizar_nome
 from tests.test_atendimentos import CPF_VALIDO, finalizar, identificar, iniciar, responder_tudo
 
 EXAME = {"motivo": "exame", "prioridade": "nao"}
