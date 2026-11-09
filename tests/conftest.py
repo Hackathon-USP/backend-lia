@@ -1,23 +1,31 @@
+import os
 from contextlib import contextmanager
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
-from sqlmodel import Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.api.dependencias import assistente_triagem, fabrica_de_unidades
 from app.main import app
-from app.persistence.db import get_session, init_db
+from app.persistence.db import criar_engine, get_session, init_db
 from app.persistence.unidade_de_trabalho import UnidadeDeTrabalhoSql
 
 
 @pytest.fixture
 def engine():
-    eng = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
+    # TEST_DATABASE_URL=postgresql://... roda a mesma suíte num Postgres (banco descartável:
+    # as tabelas são apagadas antes e depois de cada teste). Sem ela, SQLite em memória.
+    url = os.environ.get("TEST_DATABASE_URL")
+    if url:
+        eng = criar_engine(url)
+        SQLModel.metadata.drop_all(eng)
+    else:
+        eng = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     init_db(eng)
     yield eng
+    if url:
+        SQLModel.metadata.drop_all(eng)
     eng.dispose()
 
 
