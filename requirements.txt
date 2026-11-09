@@ -1,6 +1,7 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
 sqlmodel>=0.0.22
+psycopg[binary]>=3.2  # Postgres em produção (DATABASE_URL); o SQLite local não precisa dele
 pydantic-settings>=2.4
 tzdata  # base de fusos para o ZoneInfo no Windows
 openai>=3.46,<4  # IA da LIA (opcional: sem OPENAI_API_KEY o back funciona sem ela)
